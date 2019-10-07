@@ -41,6 +41,12 @@ const guessRegion = (s3: S3, constraint: void | string | undefined) => (
 
 const getBucketInfo = async (config: PluginOptions, s3: S3): Promise<{ exists: boolean, region?: string }> => {
     try {
+        if (config.region) {
+            return {
+                exists: true,
+                region: config.region,
+            };
+        }
         const { $response } = await s3.getBucketLocation({ Bucket: config.bucketName }).promise();
 
         const detectedRegion = guessRegion(s3, ($response.data && $response.data.LocationConstraint));
@@ -208,7 +214,7 @@ const deploy = async ({ yes, bucket }: { yes: boolean, bucket: string }) => {
             uploadQueue.push(asyncify(async () => {
                 let key = createSafeS3Key(relative(publicDir, path));
                 if (config.bucketPrefix) {
-                    key = `${config.bucketPrefix}/${key}`;
+                    key = join(config.bucketPrefix, key);
                 }
                 const readStream = fs.createReadStream(path);
                 const hashStream = readStream.pipe(createHash('md5').setEncoding('hex'));
@@ -262,7 +268,7 @@ const deploy = async ({ yes, bucket }: { yes: boolean, bucket: string }) => {
                 }
                 key = createSafeS3Key(key);
                 if (config.bucketPrefix) {
-                    key = `${config.bucketPrefix}/${key}`;
+                    key = join(config.bucketPrefix, key);
                 }
 
                 const tag = `"${createHash('md5').update(redirectLocation).digest('hex')}"`;
